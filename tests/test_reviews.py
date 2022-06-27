@@ -36,7 +36,7 @@ def mock_get():
 
 def test_business_reviews_url(mock_get, client):
     """
-    Tests that html text is probably parsed and returned by the route.
+    Tests that the route returns the proper status code when all logic passes.
     """
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = REVIEWS_DATA.data_as_html
@@ -55,7 +55,7 @@ def test_business_reviews_no_url(client):
 
 def test_business_reviews_validate_data(mock_get, client):
     """
-    Tests that html text is probably parsed and returned by the route.
+    Validates the JSON response returned by the route.
     """
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = REVIEWS_DATA.data_as_html
@@ -67,8 +67,8 @@ def test_business_reviews_validate_data(mock_get, client):
 
 def test_business_reviews_no_data(mock_get, client):
     """
-    Tests that html text is probably parsed and returned by the route when
-    there are no business reviews in the html text.
+    Validates the JSON response returned by the route when there
+    are no business reviews to be parsed.
     """
     mock_get.return_value.status_code = 200
     mock_get.return_value.text = NO_REVIEWS_DATA.data_as_html
