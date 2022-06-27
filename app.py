@@ -4,7 +4,8 @@ tailored json data
 """
 import json
 
-from flask import Flask, request, abort
+from flask import Flask, abort
+from bs4.element import Tag, ResultSet
 from lendingtree_client import LendingTreeClient
 from bs4_helpers import (
     get_soup_page,
@@ -12,21 +13,27 @@ from bs4_helpers import (
     parse_soup_page_attr,
     BeautifulSoup
 )
-from bs4.element import Tag, ResultSet
 
 app = Flask(__name__)
 lendingtree_client = LendingTreeClient()
 
 
 
-@app.route('/business_reviews', methods=['GET'])
-def reviews() -> json:
+@app.route('/business_reviews/<path:url>', methods=['GET'])
+def reviews(url) -> json:
+    """
+    Fetches business pages from the lendingtree API, scrapes them for business
+    review data, parses the data returns it as json.
 
-    # If no business url provided, return error
-    business_url = None
-    if request.args.get('business_url'):
-        business_url = request.args.get('business_url')
-        # TODO - business_url = _parse_user_input(user_input)
+    Args:
+        url: complete url to a lendingtree business page, incuding base uri
+
+    Return:
+        business_reviews: all reviews for the business or informative
+                               message if none exist
+    """
+    if url:
+        business_url = _parse_business_url(url)
     else:
         return abort(404)
 
@@ -45,14 +52,25 @@ def reviews() -> json:
     return business_reviews
 
 
-# TODO???????????
-def _parse_user_input(user_input):
+def _parse_business_url(full_url: str) -> str:
     """
+    Verifies that the given url is for the lendingtree API and parses it
+    for the business path.
+
+    Args:
+        full_url: complete url to a lendingtree business page, incuding base uri
+
+    Return:
+        business_url: path to business page only, base uri removed
     """
     base_uri = lendingtree_client.base_uri
-    if base_uri in user_input:
-        business_url = user_input.split(base_uri)[1]
-        return business_url
+
+    if base_uri in full_url:
+        try:
+            business_url = full_url.split(base_uri)[1]
+            return business_url
+        except ValueError:
+            return abort(500)
     else:
         return abort(404)
 
@@ -71,7 +89,7 @@ def _fetch_business_review_page(business_url: str, page_num: int) -> str:
         fetched_page = lendingtree_client.business_reviews(business_url,
                                                            page_num)
     except ConnectionError:
-            abort(503)
+        abort(503)
     return fetched_page
 
 def _get_num_of_reviews_and_pages(soup_page: BeautifulSoup,
@@ -92,20 +110,20 @@ def _get_num_of_reviews_and_pages(soup_page: BeautifulSoup,
     # Parse soup_page for review count
     bs4_review_count = soup_page.find( class_ = "reviews-count" )
     try:
-        review_count = int(str(bs4_review_count.contents[0].string).split(' ')[0])
+        review_count = int(str(bs4_review_count.contents[0].string).split(' ', maxsplit=1)[0])
     except ValueError:
         abort(500)
 
     # Calculate total number of review pages
     if review_count == 0:
         return review_count, 0
-    elif review_count >0 and review_count <=10:
+    if 0< review_count <=10:
         return review_count, 1
-    else:
-        number_of_review_pages = review_count // reviews_per_page
-        if review_count % reviews_per_page > 0:
-            number_of_review_pages += 1
-        return review_count, number_of_review_pages
+
+    number_of_review_pages = review_count // reviews_per_page
+    if review_count % reviews_per_page > 0:
+        number_of_review_pages += 1
+    return review_count, number_of_review_pages
 
 def _parse_rating_number(rating_string: str) -> int:
     """
@@ -192,5 +210,6 @@ def _get_business_reviews(soup_landing_page, business_url: str, num_reviews,
         next_page += 1
 
     # Return reviews
-    business_reviews_json = json.dumps(business_reviews, indent=2, ensure_ascii=False).encode('utf8')
+    business_reviews_json = json.dumps(business_reviews, indent=2,
+                                       ensure_ascii=False).encode('utf8')
     return business_reviews_json
