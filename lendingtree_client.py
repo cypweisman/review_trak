@@ -5,6 +5,9 @@ import requests
 
 
 class LendingTreeClient:
+    """
+    Issues requests to the lendingtree third party API.
+    """
     def __init__(self, base_uri='https://www.lendingtree.com/reviews/business/'):
         self.base_uri = base_uri
 
@@ -19,9 +22,9 @@ class LendingTreeClient:
         Return:
             html text of the specified business page
         """
-        return self._get(business_url, params={'page_num': page_num})
+        return self.get(path=business_url, params={'pid': page_num})
 
-    def _get(self, path: str, params: dict) -> str:
+    def get(self, path: str, params: dict) -> str:
         """
         Makes GET request to lendingtree.
 

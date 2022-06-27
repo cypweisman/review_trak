@@ -11,8 +11,8 @@ def test_lendingtree_api_failure():
     Tests that a ConnectionError will be raised if the third party lendingtree
     API is down.
     """
-    with requests_mock.mock() as m:
-        m.get(requests_mock.ANY, status_code=500, text='Error from lendingtree')
+    with requests_mock.mock() as mock:
+        mock.get(requests_mock.ANY, status_code=500, text='Error from lendingtree')
 
         with pytest.raises(ConnectionError):
             # You cannot make any assertion on the result
